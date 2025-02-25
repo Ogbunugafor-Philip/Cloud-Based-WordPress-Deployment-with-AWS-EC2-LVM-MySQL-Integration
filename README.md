@@ -39,6 +39,7 @@ Launch an EC2 instance for the Web Server
 ```bash
 aws ec2 run-instances --image-id ami-xxxxxxxx --count 1 --instance-type t2.micro --key-name MyKeyPair --security-groups MySecurityGroup
 ```
+![Image](https://github.com/user-attachments/assets/324cd243-c278-4408-8932-c98c9b8985d9)
 
 We would need to create and attach three EBS volumes (10 GiB each) to our webserver instance. Amazon Elastic Block Store (EBS) is a scalable, high-performance block storage service for EC2 instances, used for storing persistent data, databases, file systems, and application 
 
@@ -47,12 +48,13 @@ aws ec2 attach-volume --volume-id vol-xxxxxxxx --instance-id i-xxxxxxxx --device
 aws ec2 attach-volume --volume-id vol-yyyyyyyy --instance-id i-xxxxxxxx --device /dev/xvdbc
 aws ec2 attach-volume --volume-id vol-zzzzzzzz --instance-id i-xxxxxxxx --device /dev/xvdbd
 ```
-
+![Image](https://github.com/user-attachments/assets/9f994ad6-eeb4-4cfd-9495-b62662a54e06)
 
 Verify Attached Volumes
 ```bash
 lsblk
 ```
+![Image](https://github.com/user-attachments/assets/2c91788a-5b27-4c81-94d0-d3e72b29b3cc)
 
 ### Step 2: Configure Storage Using LVM on the Web Server
 LVM (Logical Volume Manager) is a storage management system that allows flexible and dynamic partitioning of disk space, enabling easier resizing, snapshots, and efficient allocation of storage across multiple physical drives.
@@ -69,11 +71,13 @@ Install and configure LVM (Physical Volumes, Volume Group, Logical Volumes). LVM
 sudo apt update
 sudo apt install -y lvm2
 ```
+![Image](https://github.com/user-attachments/assets/e81dc099-36ff-433c-87f7-8bebe2c6f162)
 
 Scan all available disk devices and partitions to identify those that can be used for Logical Volume Manager (LVM). Run;
 ```bash
 sudo lvmdiskscan
 ```
+![Image](https://github.com/user-attachments/assets/7163ec8d-eb69-4eda-a415-43a01cf5032b)
 Initialize disks or partitions as LVM Physical Volumes (PVs). This step is necessary before these disks can be added to a Volume Group (VG) and further divided into Logical Volumes (LVs). Run;
 ```bash
 sudo pvcreate /dev/xvdbb1 /dev/xvdbc1 /dev/xvdbd1
@@ -82,6 +86,7 @@ To confirm that the physical volumes were created successfully, run;
 ```bash
 sudo pvs
 ```
+![Image](https://github.com/user-attachments/assets/1317f01b-2ec7-499c-a3e9-aa0bb80bdd24)
 Next, we need to create a Volume Group (VG) by combining all our Physical Volumes (PVs). A Volume Group acts as a storage pool from which Logical Volumes (LVs) can be created. The below command creates a VG and names in webdata-vg. Run;
 ```bash
 sudo vgcreate webdata-vg /dev/xvdbb1 /dev/xvdbc1 /dev/xvdbd1
@@ -98,6 +103,8 @@ Verify that your Logical Volume has been created successfully. Run;
 ```bash
 sudo lvs
 ```
+![Image](https://github.com/user-attachments/assets/2e7e05a4-9bd3-4fce-8806-e144dce3abc0)
+
 Verify the entire setup
 ```bash
 sudo vgdisplay -v
@@ -109,6 +116,7 @@ Use mkfs.ext4 to format the logical volumes with ext4 filesystem. Use mkfs.ext4 
 sudo mkfs -t ext4 /dev/webdata-vg/apps-lv
 sudo mkfs -t ext4 /dev/webdata-vg/logs-lv
 ```
+![Image](https://github.com/user-attachments/assets/26e66ae4-8573-450d-9378-d10190c2e526)
 Create /var/www/html directory to store website files. Run;
 ```bash
 sudo mkdir -p /var/www/html
@@ -122,6 +130,7 @@ To confirm the creation of these two directories, run;
 ```bash
 ls -ld /var/www/html /home/recovery/logs
 ```
+![Image](https://github.com/user-attachments/assets/f7ba3b39-6310-4306-853f-40ac7e2aadc2)
 
 Mount /var/www/html on apps-lv logical volume and
 ```bash
@@ -144,15 +153,21 @@ Check to confirm created directories are mounted correctly. Run
 ```Bash
 lsblk
 ```
+![Image](https://github.com/user-attachments/assets/6f2b5b0c-a9ed-43d8-9769-34199a83949b)
+
 Next, we would need to update our UUID. Updating the UUID in /etc/fstab ensures that your logical volumes (LVM partitions) are automatically mounted to the correct directories (/var/www/html and /var/log) even after a reboot.
 To get the UUID of the /var/www/html and /var/log, run;
 ```Bash
 sudo blkid
 ```
+![Image](https://github.com/user-attachments/assets/5600df96-4c83-4e80-9f82-16786afae5ac)
+
 Update /etc/fstab using your own UUID. Run;
 ```Bash
 sudo vi /etc/fstab
 ```
+![Image](https://github.com/user-attachments/assets/86e36130-bc8b-4e8f-aa0d-f7a3cb27c1ba)
+
 Test the configuration and reload the daemon
 ```bash
 sudo mount -a
@@ -162,6 +177,7 @@ Verify your setup. Run;
 ```bash
 df -h
 ```
+![Image](https://github.com/user-attachments/assets/b2ebee04-7fea-4adb-94fc-9885b3a1a92c)
 
 ### Step 3: Prepare the Database Server (EC2 Instance)
 
@@ -179,6 +195,8 @@ sudo systemctl restart mysqld
 sudo systemctl enable mysqld
 sudo systemctl status mysqld
 ```
+![Image](https://github.com/user-attachments/assets/a71f08b7-ee1d-4347-bc54-c198b9ae3c8b)
+
 Start MySQL. Run
 ```bash
 sudo mysql 
@@ -213,6 +231,7 @@ Check if php is installed with the command;
 ```bash
 php -v
 ```
+![Image](https://github.com/user-attachments/assets/8d99e07f-cd85-4874-8482-c26cc591b4d8)
 Download and configure WordPress. Run these commands one by one
 ```bash
 mkdir wordpress
@@ -232,6 +251,7 @@ sudo cp wp-config-sample.php wp-config.php
 
 ### Step 6: Configure WordPress Database Connection
 Do not forget to open MySQL port 3306 on DB Server EC2. For extra security, you shall allow access to the DB server ONLY from your Web Server’s IP address, so in the Inbound Rule configuration specify source as /32
+![Image](https://github.com/user-attachments/assets/16a82c48-fcc1-4bc4-9659-b4a2038e7ab5)
 
 Install MySQL client, start, enable and check the status. Run;
 ```bash
@@ -244,10 +264,13 @@ Test that you can connect from your Web Server to your DB server by using mysql-
 ```bash
 sudo mysql -u wordpress-user -p -h 172.31.92.14
 ```
+![Image](https://github.com/user-attachments/assets/538a05f4-6e6f-48f0-ad58-e8e267f415e2)
+
 We would need to update our database details on our web server. Run;
 ```bash
 sudo vi /var/www/html/wp-config.php
 ```
+![Image](https://github.com/user-attachments/assets/da471fc9-234c-4b1c-8541-b77ad590798f)
 ### Step 7: Security and Final Configuration
 We want the webserver to serve the wordpress page with only the public ip on the browser.
 Go to the main configuration file. Run
@@ -255,6 +278,7 @@ Go to the main configuration file. Run
 ```bash
 sudo vi /etc/apache2/sites-available/000-default.conf
 ```
+![Image](https://github.com/user-attachments/assets/c07b2fa6-65b4-481a-bcad-e11e0ce54781)
 Change it from "/var/www/html" to "/var/www/html/wordpress"
 
 Apply SELinux policies for Apache. SELinux (Security-Enhanced Linux) is a security mechanism in Linux that controls access to system resources based on policies. It acts as an extra layer of security by enforcing rules on what processes (like Apache, MySQL, etc.) can access specific files, directories, ports, and system functions. 
@@ -272,6 +296,9 @@ Open a browser and navigate to:
 ```
 http://<Web-Server-Public-IP>
 ```
+![Image](https://github.com/user-attachments/assets/6dda1a02-cd27-42f8-8015-90e13a48eb07)
+
+![Image](https://github.com/user-attachments/assets/88a9b44d-d9c0-4fa8-bb71-e5714e32ae74)
 
 ## Conclusion
 
